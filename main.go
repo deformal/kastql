@@ -1,22 +1,24 @@
 package main
 
 import (
-	"flag"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/deformal/kastql/cmd"
+	"github.com/deformal/kastql/pkg"
+
+	"github.com/deformal/kastql/cmd/types"
 )
 
 func main() {
-	cmd.WelcomeMessage()
-	switch os.Args[1] {
-	case "serve":
-		serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
-		port := serveCmd.Int("port", 9000, "Port to serve KastQL on")
-		serveCmd.Parse(os.Args[2:])
-		fmt.Println("Port", *port)
+	args := cmd.WelcomeMessage()
+	switch args.Command {
+	case types.Serve:
+		pkg.ProcessCommandLineFlagsForServeCommand(args.Flags)
+	case types.Status:
+		cmd.Status()
 	default:
+		log.Fatal("Invalid Command passed.")
 		os.Exit(1)
 	}
 }

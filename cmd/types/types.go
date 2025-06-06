@@ -1,14 +1,28 @@
 package types
 
-type Command struct{}
-type Flag string
-
-const (
-	Serve Command = "serve"
-)
-
-var CommandList = []Command{
-	Serve,
+type WelcomeMessageResponse struct {
+	Command string
+	Flags   []string
 }
 
-var ServeFlagsList = []Flag{}
+type CommandFlags struct {
+	Name        string
+	Description string
+}
+
+type Command struct {
+	Name        string
+	Description string
+	Flags       *map[string]CommandFlags
+}
+
+const (
+	Serve  = "serve"
+	Status = "status"
+)
+
+const (
+	ServeCommandPortFlag   = "port"
+	ServeCommandConfigFlag = "config"
+	ServeCommandHelpFlag   = "help"
+)
