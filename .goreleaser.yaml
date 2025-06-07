@@ -1,4 +1,3 @@
-version: 1
 
 before:
   hooks:
@@ -33,3 +32,6 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+snapshot:
+  name_template: kastql_dev

@@ -3,24 +3,34 @@ package pkg
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"slices"
+	"strings"
 
-	"github.com/deformal/kastql/cmd/types"
 	"github.com/deformal/kastql/internal/utils"
 )
 
 func ProcessCommandLineFlagsForServeCommand(osArgs []string) {
-	flags := osArgs[2:]
-	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
-	serveCmd.Parse(flags)
-	for _, userFlag := range flags {
-		switch userFlag {
-		case types.ServeCommandPortFlag:
-			port := serveCmd.Int("port", utils.DefaultPort, "Port to serve KastQL on")
-			fmt.Printf("The Graphql Engine is starting on port: %d", port)
-		default:
-			fmt.Println("Incorrect Flags passed by the user")
+	serveComamnd := flag.NewFlagSet("serve", flag.ExitOnError)
+	port := serveComamnd.Int("port", utils.DefaultPort, "Port for the KasQl Enigne")
+	config := serveComamnd.String("config", utils.ConfigFilePathAndName, "Config file if any")
+	verbose := serveComamnd.Bool("verbose", false, "Enable verbose logging")
+	serveComamnd.Parse(osArgs)
+	configFileFormat := strings.Split(*config, ".")[1]
+	if !*verbose {
+		fmt.Println("Verbose logging disabled")
+	}
+	if len(*config) > 0 {
+		if !slices.Contains(utils.AcceptedConfigFileFormats, configFileFormat) {
+			log.Fatal("The config file must be a .yaml or yml file")
+			os.Exit(1)
+		}
+		if _, err := os.Stat(*config); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "❌ Config file not found: %s\n", *config)
 			os.Exit(1)
 		}
 	}
+
+	fmt.Printf("The Graphql Engine is starting on port: %d with config file", *port)
 }

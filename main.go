@@ -18,7 +18,7 @@ func main() {
 	case types.Status:
 		cmd.Status()
 	default:
-		log.Fatal("Invalid Command passed.")
+		log.Fatal("At least one command to be expected\nshow docs")
 		os.Exit(1)
 	}
 }

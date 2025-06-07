@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/deformal/kastql/cmd/types"
+	"github.com/deformal/kastql/internal/utils"
 )
 
 func WelcomeMessage() types.WelcomeMessageResponse {
@@ -13,7 +14,7 @@ func WelcomeMessage() types.WelcomeMessageResponse {
 		fmt.Println("No command was passed, was expecting atlease 1 command")
 		os.Exit(1)
 	}
-	message := "KastQl Router welcome \n"
+	message := fmt.Sprintf("KastQl %s \n", utils.Version)
 	response.Command = os.Args[1]
 	if len(os.Args[2:]) <= 0 {
 		response.Flags = nil
