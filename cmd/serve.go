@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
 
+	"github.com/deformal/kastql/internal/ui"
 	"github.com/deformal/kastql/internal/utils"
 )
 
@@ -34,5 +36,12 @@ func ProcessCommandLineFlagsForServeCommand(osArgs []string) {
 	if *port != utils.DefaultPort {
 		utils.CurrentPort = *port
 	}
-	fmt.Printf("The Graphql Engine is being served on port: %d", utils.CurrentPort)
+	mux := http.NewServeMux()
+	mux.Handle("/", ui.Handler())
+	servingMessage := fmt.Sprintf("http://localhost:%d/", *port)
+	fmt.Printf("The Graphql Engine is running on: %s", servingMessage)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), mux)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
