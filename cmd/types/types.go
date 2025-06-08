@@ -17,8 +17,9 @@ type Command struct {
 }
 
 const (
-	Serve  = "serve"
-	Status = "status"
+	Serve   = "serve"
+	Status  = "status"
+	Version = "version"
 )
 
 const (

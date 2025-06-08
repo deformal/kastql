@@ -1,4 +1,4 @@
-package pkg
+package cmd
 
 import (
 	"flag"
@@ -31,6 +31,8 @@ func ProcessCommandLineFlagsForServeCommand(osArgs []string) {
 			os.Exit(1)
 		}
 	}
-
-	fmt.Printf("The Graphql Engine is starting on port: %d with config file", *port)
+	if *port != utils.DefaultPort {
+		utils.CurrentPort = *port
+	}
+	fmt.Printf("The Graphql Engine is being served on port: %d", utils.CurrentPort)
 }

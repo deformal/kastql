@@ -1,30 +1,25 @@
-
 before:
   hooks:
     - go mod tidy
     - go generate ./...
 
 builds:
-  - env:
+  - main: ./main.go
+    binary: kastql
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - darwin
-    main: ./main.go     
-    binary: kastql     
-    ldflags:
-      - -s -w
     goarch:
       - amd64
+      - arm64
+    ldflags:
+      - -s -w
 
 archives:
   - format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 changelog:
   sort: asc
@@ -32,6 +27,3 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-
-snapshot:
-  name_template: kastql_dev
