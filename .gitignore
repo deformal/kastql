@@ -40,8 +40,8 @@ dist/
 /coverage
 
 # next.js
-./ui/.next/
-/out/
+/ui/.next/
+/ui/out
 
 # production
 /build
