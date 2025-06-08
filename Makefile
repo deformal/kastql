@@ -15,3 +15,7 @@ build-dev:
 	@echo "Building the ui"
 	cd ui && bun run build
 	sudo cp -r ./ui/out ./internal/ui/static/
+
+release:
+	@echo "Releasing"
+	goreleaser release --clean
