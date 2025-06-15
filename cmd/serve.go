@@ -1,47 +1,43 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"slices"
-	"strings"
 
 	"github.com/deformal/kastql/internal/ui"
-	"github.com/deformal/kastql/internal/utils"
+	"github.com/spf13/cobra"
 )
 
-func ProcessCommandLineFlagsForServeCommand(osArgs []string) {
-	serveComamnd := flag.NewFlagSet("serve", flag.ExitOnError)
-	port := serveComamnd.Int("port", utils.DefaultPort, "Port for the KasQl Enigne")
-	config := serveComamnd.String("config", utils.ConfigFilePathAndName, "Config file if any")
-	verbose := serveComamnd.Bool("verbose", false, "Enable verbose logging")
-	serveComamnd.Parse(osArgs)
-	configFileFormat := strings.Split(*config, ".")[1]
-	if !*verbose {
-		fmt.Println("Verbose logging disabled")
-	}
-	if len(*config) > 0 {
-		if !slices.Contains(utils.AcceptedConfigFileFormats, configFileFormat) {
-			log.Fatal("The config file must be a .yaml or yml file")
-			os.Exit(1)
-		}
-		if _, err := os.Stat(*config); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "❌ Config file not found: %s\n", *config)
-			os.Exit(1)
-		}
-	}
-	if *port != utils.DefaultPort {
-		utils.CurrentPort = *port
-	}
+var (
+	port    int  = 8080
+	config  bool = false
+	verbose bool = false
+)
+
+var ServeCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Serve the GraphQL Engine",
+	Long:  `Serve the GraphQL Engine on the specified port`,
+	Run: func(cmd *cobra.Command, args []string) {
+		serve(cmd, args)
+	},
+}
+
+func serve(cmd *cobra.Command, args []string) {
 	mux := http.NewServeMux()
 	mux.Handle("/", ui.Handler())
-	servingMessage := fmt.Sprintf("http://localhost:%d/", *port)
+	servingMessage := fmt.Sprintf("http://localhost:%d/", port)
 	fmt.Printf("The Graphql Engine is running on: %s", servingMessage)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", *port), mux)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func init() {
+	ServeCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port for the KasQl Enigne")
+	ServeCmd.Flags().BoolVarP(&config, "config", "c", false, "Config file if any")
+	ServeCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
+	RootCmd.AddCommand(ServeCmd)
 }

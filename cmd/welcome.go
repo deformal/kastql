@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/deformal/kastql/cmd/types"
 	"github.com/deformal/kastql/internal/utils"
+	"github.com/deformal/kastql/types"
 )
 
 func WelcomeMessage() types.WelcomeMessageResponse {
