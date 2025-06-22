@@ -6,12 +6,17 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 )
 
 //go:embed static/out/*
 var content embed.FS
 
 func Handler() http.Handler {
+	if _, err := os.Stat("ui/out"); os.IsNotExist(err) {
+		return http.FileServer(http.FS(content))
+	}
+
 	staticFS, err := fs.Sub(content, "static/out")
 	if err != nil {
 		fmt.Println(err)

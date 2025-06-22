@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +21,6 @@ Key features include:
 Whether you're building a new GraphQL API or migrating from REST, KastQL provides all the tools you need to create a robust and scalable GraphQL service.`,
 	Version: "0.1.0",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("KastQL is a full fledged GraphQL engine.")
+		cmd.Help()
 	},
 }

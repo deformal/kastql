@@ -10,11 +10,12 @@ dev:
 	./dist/kastql_darwin_arm64/kastql $(ARGS)
 
 build-dev:
-	@echo "🔧 Building $(BINARY_NAME) for $(GOOS)/$(GOARCH)..."
-	goreleaser build --snapshot --clean
 	@echo "Building the ui"
 	cd ui && bun run build
-	sudo cp -r ./ui/out ./internal/ui/static/
+	cp -r ./ui/out ./internal/ui/static/
+	@echo "🔧 Building $(BINARY_NAME) for $(GOOS)/$(GOARCH)..."
+	goreleaser build --snapshot --clean
+	
 
 release:
 	@echo "Releasing"
