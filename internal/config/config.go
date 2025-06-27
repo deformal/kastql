@@ -9,7 +9,6 @@ import (
 	"github.com/deformal/kastql/internal/storage"
 )
 
-// Config holds application configuration
 type Config struct {
 	RegistryFile string `json:"registry_file"`
 	LogLevel     string `json:"log_level"`
@@ -17,7 +16,6 @@ type Config struct {
 	UIPort       int    `json:"ui_port"`
 }
 
-// DefaultConfig returns default configuration
 func DefaultConfig() *Config {
 	return &Config{
 		RegistryFile: "kastql-registry.json",
@@ -27,7 +25,6 @@ func DefaultConfig() *Config {
 	}
 }
 
-// LoadConfig loads configuration from file
 func LoadConfig(configPath string) (*Config, error) {
 	if configPath == "" {
 		return DefaultConfig(), nil
@@ -46,7 +43,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &config, nil
 }
 
-// SaveConfig saves configuration to file
 func SaveConfig(config *Config, configPath string) error {
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -60,17 +56,14 @@ func SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
-// RegistryManager handles persistent registry storage
 type RegistryManager struct {
 	config       *Config
 	registryPath string
 }
 
-// NewRegistryManager creates a new registry manager
 func NewRegistryManager(config *Config) *RegistryManager {
 	registryPath := config.RegistryFile
 	if !filepath.IsAbs(registryPath) {
-		// Make it relative to current directory
 		registryPath = filepath.Join(".", registryPath)
 	}
 
@@ -80,23 +73,18 @@ func NewRegistryManager(config *Config) *RegistryManager {
 	}
 }
 
-// LoadRegistry loads the registry from persistent storage
 func (rm *RegistryManager) LoadRegistry() (*storage.Registry, error) {
 	registry := storage.NewRegistry()
 
-	// Check if registry file exists
 	if _, err := os.Stat(rm.registryPath); os.IsNotExist(err) {
-		// File doesn't exist, return empty registry
 		return registry, nil
 	}
 
-	// Read registry file
 	data, err := os.ReadFile(rm.registryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read registry file: %w", err)
 	}
 
-	// Import registry data
 	if err := registry.ImportRegistry(data); err != nil {
 		return nil, fmt.Errorf("failed to import registry: %w", err)
 	}
@@ -104,7 +92,6 @@ func (rm *RegistryManager) LoadRegistry() (*storage.Registry, error) {
 	return registry, nil
 }
 
-// SaveRegistry saves the registry to persistent storage
 func (rm *RegistryManager) SaveRegistry(registry *storage.Registry) error {
 	data, err := registry.ExportRegistry()
 	if err != nil {
@@ -118,7 +105,6 @@ func (rm *RegistryManager) SaveRegistry(registry *storage.Registry) error {
 	return nil
 }
 
-// GetRegistryPath returns the registry file path
 func (rm *RegistryManager) GetRegistryPath() string {
 	return rm.registryPath
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/deformal/kastql/internal/introspection"
 )
 
-// ServerInfo contains information about a GraphQL server
 type ServerInfo struct {
 	ID          string                `json:"id"`
 	Name        string                `json:"name"`
@@ -21,20 +20,17 @@ type ServerInfo struct {
 	IsActive    bool                  `json:"is_active"`
 }
 
-// Registry manages GraphQL server registrations and schemas
 type Registry struct {
 	servers map[string]*ServerInfo
 	mutex   sync.RWMutex
 }
 
-// NewRegistry creates a new schema registry
 func NewRegistry() *Registry {
 	return &Registry{
 		servers: make(map[string]*ServerInfo),
 	}
 }
 
-// RegisterServer adds a new GraphQL server to the registry
 func (r *Registry) RegisterServer(id, name, endpoint, description string, schema *introspection.Schema) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -55,7 +51,6 @@ func (r *Registry) RegisterServer(id, name, endpoint, description string, schema
 	return nil
 }
 
-// UpdateServer updates an existing server's information
 func (r *Registry) UpdateServer(id string, updates map[string]interface{}) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -65,7 +60,6 @@ func (r *Registry) UpdateServer(id string, updates map[string]interface{}) error
 		return fmt.Errorf("server with ID %s not found", id)
 	}
 
-	// Update fields based on the updates map
 	if name, ok := updates["name"].(string); ok {
 		server.Name = name
 	}
@@ -86,7 +80,6 @@ func (r *Registry) UpdateServer(id string, updates map[string]interface{}) error
 	return nil
 }
 
-// GetServer retrieves a server by ID
 func (r *Registry) GetServer(id string) (*ServerInfo, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -99,7 +92,6 @@ func (r *Registry) GetServer(id string) (*ServerInfo, error) {
 	return server, nil
 }
 
-// GetAllServers returns all registered servers
 func (r *Registry) GetAllServers() []*ServerInfo {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -112,7 +104,6 @@ func (r *Registry) GetAllServers() []*ServerInfo {
 	return servers
 }
 
-// GetActiveServers returns only active servers
 func (r *Registry) GetActiveServers() []*ServerInfo {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -127,7 +118,6 @@ func (r *Registry) GetActiveServers() []*ServerInfo {
 	return activeServers
 }
 
-// RemoveServer removes a server from the registry
 func (r *Registry) RemoveServer(id string) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -140,21 +130,18 @@ func (r *Registry) RemoveServer(id string) error {
 	return nil
 }
 
-// DeactivateServer marks a server as inactive
 func (r *Registry) DeactivateServer(id string) error {
 	return r.UpdateServer(id, map[string]interface{}{
 		"is_active": false,
 	})
 }
 
-// ActivateServer marks a server as active
 func (r *Registry) ActivateServer(id string) error {
 	return r.UpdateServer(id, map[string]interface{}{
 		"is_active": true,
 	})
 }
 
-// FindServerByField searches for a server by field name
 func (r *Registry) FindServerByField(fieldName string) (*ServerInfo, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -164,28 +151,24 @@ func (r *Registry) FindServerByField(fieldName string) (*ServerInfo, error) {
 			continue
 		}
 
-		// Check query type fields
 		if server.Schema.QueryType != nil {
 			if server.Schema.QueryType.Name == fieldName {
 				return server, nil
 			}
 		}
 
-		// Check mutation type fields
 		if server.Schema.MutationType != nil {
 			if server.Schema.MutationType.Name == fieldName {
 				return server, nil
 			}
 		}
 
-		// Check subscription type fields
 		if server.Schema.SubscriptionType != nil {
 			if server.Schema.SubscriptionType.Name == fieldName {
 				return server, nil
 			}
 		}
 
-		// Check all types for the field
 		for _, t := range server.Schema.Types {
 			if t.Name == fieldName {
 				return server, nil
@@ -196,7 +179,6 @@ func (r *Registry) FindServerByField(fieldName string) (*ServerInfo, error) {
 	return nil, fmt.Errorf("no server found with field %s", fieldName)
 }
 
-// ExportRegistry exports the registry to JSON
 func (r *Registry) ExportRegistry() ([]byte, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -204,7 +186,6 @@ func (r *Registry) ExportRegistry() ([]byte, error) {
 	return json.MarshalIndent(r.servers, "", "  ")
 }
 
-// ImportRegistry imports servers from JSON
 func (r *Registry) ImportRegistry(data []byte) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -218,7 +199,6 @@ func (r *Registry) ImportRegistry(data []byte) error {
 	return nil
 }
 
-// GetServerCount returns the total number of registered servers
 func (r *Registry) GetServerCount() int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -226,7 +206,6 @@ func (r *Registry) GetServerCount() int {
 	return len(r.servers)
 }
 
-// GetActiveServerCount returns the number of active servers
 func (r *Registry) GetActiveServerCount() int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()

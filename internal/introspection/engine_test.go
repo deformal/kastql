@@ -15,12 +15,10 @@ func TestNewEngine(t *testing.T) {
 }
 
 func TestIntrospectionQuery(t *testing.T) {
-	// Test that the introspection query is valid
 	if IntrospectionQuery == "" {
 		t.Fatal("IntrospectionQuery is empty")
 	}
 
-	// Test that it contains expected GraphQL keywords
 	expectedKeywords := []string{"__schema", "queryType", "mutationType", "subscriptionType", "types"}
 	for _, keyword := range expectedKeywords {
 		if !contains(IntrospectionQuery, keyword) {
@@ -40,7 +38,6 @@ func TestIntrospectionRequest(t *testing.T) {
 }
 
 func TestSchemaStructure(t *testing.T) {
-	// Test that Schema struct can be created
 	schema := &Schema{
 		QueryType: &TypeRef{
 			Kind: "OBJECT",
@@ -77,7 +74,6 @@ func TestSchemaStructure(t *testing.T) {
 	}
 }
 
-// Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||

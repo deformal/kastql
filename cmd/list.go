@@ -21,16 +21,13 @@ var ListCmd = &cobra.Command{
 }
 
 func listServers() {
-	// Load configuration
 	cfg, err := config.LoadConfig(listConfigFile)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Initialize registry manager
 	registryManager := config.NewRegistryManager(cfg)
 
-	// Load registry from persistent storage
 	registry, err := registryManager.LoadRegistry()
 	if err != nil {
 		log.Fatalf("Failed to load registry: %v", err)

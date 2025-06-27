@@ -9,7 +9,6 @@ import (
 	"os"
 )
 
-//go:embed static/out/*
 var content embed.FS
 
 func Handler() http.Handler {

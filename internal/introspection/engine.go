@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// IntrospectionQuery is the standard GraphQL introspection query
 const IntrospectionQuery = `
 query IntrospectionQuery {
   __schema {
@@ -104,12 +103,10 @@ fragment TypeRef on __Type {
 }
 `
 
-// IntrospectionRequest represents the request structure for introspection
 type IntrospectionRequest struct {
 	Query string `json:"query"`
 }
 
-// IntrospectionResponse represents the response from introspection
 type IntrospectionResponse struct {
 	Data struct {
 		Schema Schema `json:"__schema"`
@@ -117,7 +114,6 @@ type IntrospectionResponse struct {
 	Errors []GraphQLError `json:"errors,omitempty"`
 }
 
-// GraphQLError represents a GraphQL error
 type GraphQLError struct {
 	Message    string                 `json:"message"`
 	Locations  []ErrorLocation        `json:"locations,omitempty"`
@@ -125,13 +121,11 @@ type GraphQLError struct {
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
-// ErrorLocation represents the location of an error
 type ErrorLocation struct {
 	Line   int `json:"line"`
 	Column int `json:"column"`
 }
 
-// Schema represents the GraphQL schema structure
 type Schema struct {
 	QueryType        *TypeRef    `json:"queryType"`
 	MutationType     *TypeRef    `json:"mutationType"`
@@ -140,14 +134,12 @@ type Schema struct {
 	Directives       []Directive `json:"directives"`
 }
 
-// TypeRef represents a reference to a GraphQL type
 type TypeRef struct {
 	Kind   string   `json:"kind"`
 	Name   string   `json:"name"`
 	OfType *TypeRef `json:"ofType"`
 }
 
-// Type represents a GraphQL type
 type Type struct {
 	Kind          string       `json:"kind"`
 	Name          string       `json:"name"`
@@ -159,7 +151,6 @@ type Type struct {
 	PossibleTypes []TypeRef    `json:"possibleTypes,omitempty"`
 }
 
-// Field represents a GraphQL field
 type Field struct {
 	Name              string       `json:"name"`
 	Description       string       `json:"description"`
@@ -169,7 +160,6 @@ type Field struct {
 	DeprecationReason string       `json:"deprecationReason"`
 }
 
-// InputValue represents a GraphQL input value
 type InputValue struct {
 	Name         string  `json:"name"`
 	Description  string  `json:"description"`
@@ -177,7 +167,6 @@ type InputValue struct {
 	DefaultValue string  `json:"defaultValue"`
 }
 
-// EnumValue represents a GraphQL enum value
 type EnumValue struct {
 	Name              string `json:"name"`
 	Description       string `json:"description"`
@@ -185,7 +174,6 @@ type EnumValue struct {
 	DeprecationReason string `json:"deprecationReason"`
 }
 
-// Directive represents a GraphQL directive
 type Directive struct {
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
@@ -193,12 +181,10 @@ type Directive struct {
 	Args        []InputValue `json:"args"`
 }
 
-// Engine handles GraphQL introspection
 type Engine struct {
 	client *http.Client
 }
 
-// NewEngine creates a new introspection engine
 func NewEngine() *Engine {
 	return &Engine{
 		client: &http.Client{
@@ -207,7 +193,6 @@ func NewEngine() *Engine {
 	}
 }
 
-// Introspect performs introspection on a GraphQL server
 func (e *Engine) Introspect(endpoint string) (*Schema, error) {
 	request := IntrospectionRequest{
 		Query: IntrospectionQuery,
@@ -253,9 +238,7 @@ func (e *Engine) Introspect(endpoint string) (*Schema, error) {
 	return &introspectionResp.Data.Schema, nil
 }
 
-// ValidateEndpoint checks if a GraphQL endpoint is accessible
 func (e *Engine) ValidateEndpoint(endpoint string) error {
-	// Try a simple introspection query to validate the endpoint
 	request := IntrospectionRequest{
 		Query: `query { __schema { queryType { name } } }`,
 	}
@@ -279,19 +262,16 @@ func (e *Engine) ValidateEndpoint(endpoint string) error {
 	}
 	defer resp.Body.Close()
 
-	// Read the response body to check for GraphQL errors
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read validation response: %w", err)
 	}
 
-	// Check if we got a valid GraphQL response (even if it has errors)
 	var response map[string]interface{}
 	if err := json.Unmarshal(body, &response); err != nil {
 		return fmt.Errorf("endpoint returned invalid JSON: %w", err)
 	}
 
-	// If we got a response with data or errors, it's a valid GraphQL endpoint
 	if _, hasData := response["data"]; hasData {
 		return nil
 	}
@@ -299,7 +279,6 @@ func (e *Engine) ValidateEndpoint(endpoint string) error {
 		return nil
 	}
 
-	// If we got a 200 response but no GraphQL structure, it might still be valid
 	if resp.StatusCode == http.StatusOK {
 		return nil
 	}
