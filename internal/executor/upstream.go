@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var httpClient = &http.Client{Timeout: 30 * time.Second}
+const defaultTimeoutMs = 30_000
+
+var baseHTTPClient = &http.Client{} // no global timeout — per-request via context
 
 type upstreamRequest struct {
 	Query     string         `json:"query"`
@@ -24,13 +27,76 @@ type upstreamResponse struct {
 	Errors []GQLError      `json:"errors,omitempty"`
 }
 
-func callUpstream(ctx context.Context, log *zap.Logger, url string, headers map[string]string, query string, variables map[string]any) (*upstreamResponse, error) {
+// callUpstream sends a GraphQL request to url with optional retry and per-request timeout.
+// retryCount = 0 → single attempt. timeoutMs = 0 → uses defaultTimeoutMs.
+func callUpstream(
+	ctx context.Context,
+	log *zap.Logger,
+	url string,
+	headers map[string]string,
+	query string,
+	variables map[string]any,
+	retryCount int,
+	timeoutMs int,
+) (*upstreamResponse, error) {
+	if timeoutMs <= 0 {
+		timeoutMs = defaultTimeoutMs
+	}
+
+	var lastErr error
+	for attempt := 0; attempt <= retryCount; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 100ms, 200ms, 400ms…
+			backoff := time.Duration(100*(1<<(attempt-1))) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		resp, err := doUpstreamRequest(ctx, log, url, headers, query, variables, timeoutMs)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+
+		// Never retry on context cancellation or 4xx client errors.
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, err
+		}
+		if isClientError(err) {
+			return nil, err
+		}
+
+		log.Warn("upstream call failed, retrying",
+			zap.String("url", url),
+			zap.Int("attempt", attempt+1),
+			zap.Int("max_retries", retryCount),
+			zap.Error(err),
+		)
+	}
+	return nil, lastErr
+}
+
+func doUpstreamRequest(
+	ctx context.Context,
+	log *zap.Logger,
+	url string,
+	headers map[string]string,
+	query string,
+	variables map[string]any,
+	timeoutMs int,
+) (*upstreamResponse, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
+	defer cancel()
+
 	body, err := json.Marshal(upstreamRequest{Query: query, Variables: variables})
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +110,7 @@ func callUpstream(ctx context.Context, log *zap.Logger, url string, headers map[
 		zap.Strings("headers", headerKeys(headers)),
 	)
 
-	resp, err := httpClient.Do(req)
+	resp, err := baseHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("call %s: %w", url, err)
 	}
@@ -61,19 +127,20 @@ func callUpstream(ctx context.Context, log *zap.Logger, url string, headers map[
 		zap.Int("body_bytes", len(raw)),
 	)
 
-	if resp.StatusCode != http.StatusOK {
-		// Surface the HTTP error clearly so it shows up in logs and in the
-		// GraphQL response rather than as a JSON parse error.
+	if resp.StatusCode >= 500 {
 		preview := string(raw)
 		if len(preview) > 200 {
 			preview = preview[:200] + "…"
 		}
-		log.Warn("upstream returned non-200",
-			zap.String("url", url),
-			zap.Int("status", resp.StatusCode),
-			zap.String("body", preview),
-		)
-		return nil, fmt.Errorf("upstream %s returned HTTP %d: %s", url, resp.StatusCode, preview)
+		return nil, &upstreamHTTPError{url: url, status: resp.StatusCode, body: preview}
+	}
+
+	if resp.StatusCode >= 400 {
+		preview := string(raw)
+		if len(preview) > 200 {
+			preview = preview[:200] + "…"
+		}
+		return nil, &upstreamClientError{url: url, status: resp.StatusCode, body: preview}
 	}
 
 	var result upstreamResponse
@@ -81,6 +148,25 @@ func callUpstream(ctx context.Context, log *zap.Logger, url string, headers map[
 		return nil, fmt.Errorf("unmarshal response from %s: %w", url, err)
 	}
 	return &result, nil
+}
+
+// ── Error types ───────────────────────────────────────────────────────────────
+
+type upstreamHTTPError struct{ url string; status int; body string }
+
+func (e *upstreamHTTPError) Error() string {
+	return fmt.Sprintf("upstream %s returned HTTP %d: %s", e.url, e.status, e.body)
+}
+
+type upstreamClientError struct{ url string; status int; body string }
+
+func (e *upstreamClientError) Error() string {
+	return fmt.Sprintf("upstream %s returned HTTP %d: %s", e.url, e.status, e.body)
+}
+
+func isClientError(err error) bool {
+	var ce *upstreamClientError
+	return errors.As(err, &ce)
 }
 
 func headerKeys(h map[string]string) []string {

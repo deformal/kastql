@@ -13,6 +13,7 @@ import (
 
 	"github.com/deformal/kastql/internal/adminapi"
 	"github.com/deformal/kastql/internal/auth"
+	"github.com/deformal/kastql/internal/cache"
 	"github.com/deformal/kastql/internal/executor"
 	"github.com/deformal/kastql/internal/metaapi"
 	"github.com/deformal/kastql/internal/metadata"
@@ -32,6 +33,7 @@ type Server struct {
 	store    *metadata.Store
 	metrics  *metrics.Store
 	secMgr   *security.Manager
+	gqlCache *cache.Cache
 }
 
 func New(
@@ -46,6 +48,7 @@ func New(
 	adminHandler *adminapi.Handler,
 	session *auth.SessionManager,
 	secMgr *security.Manager,
+	gqlCache *cache.Cache,
 ) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -60,6 +63,7 @@ func New(
 		store:    store,
 		metrics:  metricsStore,
 		secMgr:   secMgr,
+		gqlCache: gqlCache,
 		http: &http.Server{
 			Addr:         fmt.Sprintf(":%d", port),
 			Handler:      r,
@@ -145,6 +149,11 @@ func (s *Server) registerRoutes(jwtMW func(http.Handler) http.Handler, adminH *a
 		r.Get("/v1/admin/audit-log", adminH.ListAuditLog)
 		r.Get("/v1/admin/blocked-requests", adminH.ListBlockedRequests)
 
+		// Health + Schema + Cache
+		r.Get("/v1/admin/health", adminH.GetHealth)
+		r.Get("/v1/admin/schema", adminH.GetMergedSchema)
+		r.Post("/v1/admin/cache/flush", adminH.FlushCache)
+
 		// Admin panel SPA
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/admin/", http.StatusFound)
@@ -169,6 +178,7 @@ func (s *Server) registerRoutes(jwtMW func(http.Handler) http.Handler, adminH *a
 			metrics:  s.metrics,
 			log:      s.log,
 			secMgr:   s.secMgr,
+			cache:    s.gqlCache,
 			introspectionEnabled: func() bool {
 				val, _, err := s.store.GetSetting("introspection_enabled")
 				if err != nil {

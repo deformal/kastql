@@ -6,20 +6,38 @@ import (
 	"fmt"
 	"maps"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/deformal/kastql/internal/planner"
 )
 
+// timeNow is a variable so tests can override it.
+var timeNow = time.Now
+
+// CircuitBreaker is implemented by health.Monitor.
+// Defined here as an interface to avoid a circular import.
+type CircuitBreaker interface {
+	Allow(serviceName string) bool
+	RecordSuccess(serviceName string, latencyMs int64)
+	RecordFailure(serviceName string, errMsg string)
+}
+
 // Executor runs a QueryPlan and returns the merged GraphQL response.
 type Executor struct {
-	log *zap.Logger
+	log     *zap.Logger
+	circuit CircuitBreaker // optional; nil = disabled
 }
 
 // New creates an Executor.
 func New(log *zap.Logger) *Executor {
 	return &Executor{log: log}
+}
+
+// SetCircuitBreaker wires the health monitor. Call once after construction.
+func (e *Executor) SetCircuitBreaker(cb CircuitBreaker) {
+	e.circuit = cb
 }
 
 // Execute runs every step in the plan and merges the results.
@@ -223,15 +241,30 @@ func (e *Executor) callStep(
 		vars = merged
 	}
 
+	// Circuit breaker: fail-fast when the service is known to be down.
+	if e.circuit != nil && !e.circuit.Allow(step.ServiceName) {
+		return nil, nil, fmt.Errorf("service %s is unavailable (circuit open)", step.ServiceName)
+	}
+
 	e.log.Debug("calling upstream",
 		zap.String("service", step.ServiceName),
 		zap.String("url", step.ServiceURL),
 		zap.String("kind", string(step.Meta.Kind)),
 	)
 
-	resp, err := callUpstream(ctx, e.log, step.ServiceURL, headers, step.Query, vars)
+	start := timeNow()
+	resp, err := callUpstream(ctx, e.log, step.ServiceURL, headers, step.Query, vars,
+		step.RetryCount, step.TimeoutMs)
+	elapsed := timeNow().Sub(start).Milliseconds()
+
 	if err != nil {
+		if e.circuit != nil {
+			e.circuit.RecordFailure(step.ServiceName, err.Error())
+		}
 		return nil, nil, err
+	}
+	if e.circuit != nil {
+		e.circuit.RecordSuccess(step.ServiceName, elapsed)
 	}
 
 	var data map[string]any

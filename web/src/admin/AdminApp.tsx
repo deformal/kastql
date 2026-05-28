@@ -7,13 +7,15 @@ import RestEndpointsTab from './RestEndpointsTab'
 import UsersTab from './UsersTab'
 import MetricsTab from './MetricsTab'
 import SecurityTab from './SecurityTab'
+import SchemaTab from './SchemaTab'
 import './admin.css'
 
 const NAV = [
   { to: '/admin/services',      label: 'Services' },
-  { to: '/admin/relationships', label: 'Relationships' },
-  { to: '/admin/permissions',   label: 'Permissions' },
-  { to: '/admin/rest',          label: 'REST Endpoints' },
+  // { to: '/admin/relationships', label: 'Relationships' },  // hidden until core is stable
+  // { to: '/admin/permissions',   label: 'Permissions' },    // hidden until core is stable
+  // { to: '/admin/rest',          label: 'REST Endpoints' }, // hidden until core is stable
+  { to: '/admin/schema',        label: 'Schema' },
   { to: '/admin/users',         label: 'Users' },
   { to: '/admin/security',      label: 'Security' },
   { to: '/admin/metrics',       label: 'Metrics' },
@@ -57,6 +59,7 @@ export default function AdminApp() {
           <Route path="relationships" element={<RelationshipsTab />} />
           <Route path="permissions"   element={<PermissionsTab />} />
           <Route path="rest"          element={<RestEndpointsTab />} />
+          <Route path="schema"        element={<SchemaTab />} />
           <Route path="users"         element={<UsersTab />} />
           <Route path="security"      element={<SecurityTab />} />
           <Route path="metrics"       element={<MetricsTab />} />

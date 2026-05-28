@@ -10,15 +10,17 @@ import (
 
 func (s *Store) UpsertService(svc *Service) error {
 	_, err := s.db.Exec(`
-		INSERT INTO services (name, url, type, headers, enabled, updated_at)
-		VALUES (?, ?, ?, ?, ?, datetime('now'))
+		INSERT INTO services (name, url, type, headers, enabled, timeout_ms, retry_count, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
 		ON CONFLICT(name) DO UPDATE SET
-			url        = excluded.url,
-			type       = excluded.type,
-			headers    = excluded.headers,
-			enabled    = excluded.enabled,
-			updated_at = excluded.updated_at
-	`, svc.Name, svc.URL, svc.Type, svc.Headers, boolToInt(svc.Enabled))
+			url         = excluded.url,
+			type        = excluded.type,
+			headers     = excluded.headers,
+			enabled     = excluded.enabled,
+			timeout_ms  = excluded.timeout_ms,
+			retry_count = excluded.retry_count,
+			updated_at  = excluded.updated_at
+	`, svc.Name, svc.URL, svc.Type, svc.Headers, boolToInt(svc.Enabled), svc.TimeoutMs, svc.RetryCount)
 	if err != nil {
 		return fmt.Errorf("upsert service %s: %w", svc.Name, err)
 	}
@@ -32,7 +34,7 @@ func (s *Store) DeleteService(name string) error {
 
 func (s *Store) GetService(name string) (*Service, error) {
 	row := s.db.QueryRow(`
-		SELECT id, name, url, type, headers, enabled, created_at, updated_at
+		SELECT id, name, url, type, headers, enabled, timeout_ms, retry_count, created_at, updated_at
 		FROM services WHERE name = ?
 	`, name)
 	return scanService(row)
@@ -40,7 +42,7 @@ func (s *Store) GetService(name string) (*Service, error) {
 
 func (s *Store) ListServices() ([]*Service, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, url, type, headers, enabled, created_at, updated_at
+		SELECT id, name, url, type, headers, enabled, timeout_ms, retry_count, created_at, updated_at
 		FROM services ORDER BY name
 	`)
 	if err != nil {
@@ -65,7 +67,8 @@ func scanService(s scanner) (*Service, error) {
 	var enabled int
 	err := s.Scan(
 		&svc.ID, &svc.Name, &svc.URL, &svc.Type,
-		&svc.Headers, &enabled, &createdAt, &updatedAt,
+		&svc.Headers, &enabled, &svc.TimeoutMs, &svc.RetryCount,
+		&createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil

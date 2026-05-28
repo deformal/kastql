@@ -10,14 +10,16 @@ const (
 )
 
 type Service struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	URL       string      `json:"url"`
-	Type      ServiceType `json:"type"`
-	Headers   string      `json:"headers"` // JSON map
-	Enabled   bool        `json:"enabled"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID         int64       `json:"id"`
+	Name       string      `json:"name"`
+	URL        string      `json:"url"`
+	Type       ServiceType `json:"type"`
+	Headers    string      `json:"headers"` // JSON map
+	Enabled    bool        `json:"enabled"`
+	TimeoutMs  int         `json:"timeout_ms"`  // 0 = use global default (30s)
+	RetryCount int         `json:"retry_count"` // 0 = no retries
+	CreatedAt  time.Time   `json:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at"`
 }
 
 type Relationship struct {

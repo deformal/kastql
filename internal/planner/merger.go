@@ -49,6 +49,8 @@ func Merge(entries []*registry.ServiceEntry) (*MergedSchema, error) {
 		ServiceURLs:           make(map[string]string),
 		ServiceTypes:          make(map[string]string),
 		ServiceHeaders:        make(map[string]map[string]string),
+		ServiceTimeoutMs:      make(map[string]int),
+		ServiceRetryCount:     make(map[string]int),
 	}
 
 	// accumulated type definitions (name → definition)
@@ -63,6 +65,8 @@ func Merge(entries []*registry.ServiceEntry) (*MergedSchema, error) {
 		if h, err := jsonToHeaderMap(entry.Headers); err == nil && len(h) > 0 {
 			result.ServiceHeaders[entry.Name] = h
 		}
+		result.ServiceTimeoutMs[entry.Name] = entry.TimeoutMs
+		result.ServiceRetryCount[entry.Name] = entry.RetryCount
 
 		doc, err := parseServiceSDL(entry)
 		if err != nil {

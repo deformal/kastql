@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/deformal/kastql/internal/auth"
+	"github.com/deformal/kastql/internal/cache"
+	"github.com/deformal/kastql/internal/health"
 	"github.com/deformal/kastql/internal/metadata"
 )
 
@@ -24,17 +26,29 @@ type SecurityInvalidator interface {
 	InvalidateCache()
 }
 
+// SDLProvider returns the merged schema SDL. Implemented by planner.Planner.
+type SDLProvider interface {
+	MergedSDL() string
+}
+
 type Handler struct {
 	cfg      Config
 	store    *metadata.Store
 	session  *auth.SessionManager
 	log      *zap.Logger
-	secInv   SecurityInvalidator // optional; nil until SetSecurityInvalidator is called
+	secInv   SecurityInvalidator
+	monitor  *health.Monitor // optional; set via SetHealthMonitor
+	sdl      SDLProvider     // optional; set via SetSDLProvider
+	gqlCache *cache.Cache    // optional; set via SetCacheFlusher
 }
 
 func New(cfg Config, store *metadata.Store, session *auth.SessionManager, log *zap.Logger) *Handler {
 	return &Handler{cfg: cfg, store: store, session: session, log: log}
 }
+
+func (h *Handler) SetHealthMonitor(m *health.Monitor) { h.monitor = m }
+func (h *Handler) SetSDLProvider(p SDLProvider)        { h.sdl = p }
+func (h *Handler) SetCacheFlusher(c *cache.Cache)       { h.gqlCache = c }
 
 // SetSecurityInvalidator wires the security manager cache invalidator.
 // Call once after both adminapi.Handler and security.Manager are constructed.
@@ -590,6 +604,48 @@ func (h *Handler) ListBlockedRequests(w http.ResponseWriter, r *http.Request) {
 		entries = []*metadata.BlockedRequest{}
 	}
 	writeJSON(w, http.StatusOK, entries)
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+func (h *Handler) GetHealth(w http.ResponseWriter, r *http.Request) {
+	if h.monitor == nil {
+		writeJSON(w, http.StatusOK, []*health.ServiceStatus{})
+		return
+	}
+	statuses := h.monitor.AllStatuses()
+	if statuses == nil {
+		statuses = []*health.ServiceStatus{}
+	}
+	writeJSON(w, http.StatusOK, statuses)
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+func (h *Handler) GetMergedSchema(w http.ResponseWriter, r *http.Request) {
+	if h.sdl == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "schema not available"})
+		return
+	}
+	sdl := h.sdl.MergedSDL()
+	if sdl == "" {
+		writeJSON(w, http.StatusOK, map[string]string{"sdl": ""})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"sdl": sdl})
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+
+func (h *Handler) FlushCache(w http.ResponseWriter, r *http.Request) {
+	if h.gqlCache == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"flushed": 0})
+		return
+	}
+	count := h.gqlCache.Len()
+	h.gqlCache.Flush()
+	h.auditLog(r, "flush_cache", strconv.Itoa(count)+" entries")
+	writeJSON(w, http.StatusOK, map[string]any{"flushed": count})
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

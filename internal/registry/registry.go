@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/deformal/kastql/internal/config"
+	"github.com/deformal/kastql/internal/health"
 	"github.com/deformal/kastql/internal/metadata"
 )
 
@@ -127,6 +128,26 @@ func (r *Registry) List() []*ServiceEntry {
 	out := make([]*ServiceEntry, 0, len(r.services))
 	for _, e := range r.services {
 		out = append(out, e)
+	}
+	return out
+}
+
+// HealthTargets returns the minimal info needed by the health monitor to probe each service.
+// Implements health.ServiceProvider.
+func (r *Registry) HealthTargets() []health.ServiceTarget {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]health.ServiceTarget, 0, len(r.services))
+	for _, e := range r.services {
+		if !e.Enabled {
+			continue
+		}
+		headers, _ := jsonToHeaders(e.Headers)
+		out = append(out, health.ServiceTarget{
+			Name:    e.Name,
+			URL:     e.URL,
+			Headers: headers,
+		})
 	}
 	return out
 }

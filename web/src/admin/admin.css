@@ -160,6 +160,8 @@
 .adm-badge-stitching   { background: #065f4620; color: #34d399; }
 .adm-badge-ok          { background: #065f4620; color: #34d399; }
 .adm-badge-off         { background: #1e293b; color: #64748b; border: 1px solid #334155; }
+.adm-badge-danger      { background: #450a0a20; color: #f87171; }
+.adm-badge-warn        { background: #78350f20; color: #fbbf24; }
 .adm-badge-deny        { background: #450a0a20; color: #f87171; }
 .adm-badge-method-get    { background: #1d4ed820; color: #60a5fa; }
 .adm-badge-method-post   { background: #065f4620; color: #34d399; }
@@ -275,3 +277,30 @@
 /* ── States ───────────────────────────────────────────────────────────────── */
 .adm-loading, .adm-empty { color: #64748b; padding: 24px; text-align: center; font-size: 13px; }
 .adm-error { color: #f87171; background: #450a0a20; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin: 8px 0; }
+
+/* ── Schema tab ───────────────────────────────────────────────────────────── */
+.adm-search {
+  padding: 7px 12px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #f1f5f9;
+  font-size: .85rem;
+  outline: none;
+  width: 220px;
+  transition: border-color .12s;
+}
+.adm-search:focus { border-color: #e10098; }
+.adm-sdl {
+  margin: 0;
+  padding: 16px;
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 70vh;
+  font-size: .8rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  white-space: pre;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}

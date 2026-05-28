@@ -21,9 +21,11 @@ type MergedSchema struct {
 	EntityKeys map[string]map[string][]string
 
 	// Per-service metadata
-	ServiceURLs    map[string]string            // name → URL
-	ServiceTypes   map[string]string            // name → "federation"|"stitching"
-	ServiceHeaders map[string]map[string]string // name → headers to send upstream
+	ServiceURLs       map[string]string            // name → URL
+	ServiceTypes      map[string]string            // name → "federation"|"stitching"
+	ServiceHeaders    map[string]map[string]string // name → headers to send upstream
+	ServiceTimeoutMs  map[string]int               // name → timeout in ms (0 = global default)
+	ServiceRetryCount map[string]int               // name → retry count (0 = no retries)
 }
 
 // QueryPlan describes how to execute a GraphQL operation across multiple services.
@@ -39,6 +41,10 @@ type Step struct {
 	ServiceName string
 	ServiceURL  string
 	ServiceType string // "federation" | "stitching"
+
+	// Per-service retry and timeout config, copied from metadata at plan time.
+	RetryCount int // 0 = no retries
+	TimeoutMs  int // 0 = use executor global default
 
 	Query     string         // sub-query to send to this service
 	Variables map[string]any // variables for this step (may be subset of original)

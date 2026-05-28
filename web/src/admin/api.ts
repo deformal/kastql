@@ -236,6 +236,46 @@ export async function deletePersistedQuery(id: string) {
   }
 }
 
+// ── Health ────────────────────────────────────────────────────────────────────
+
+export type CircuitState = 'closed' | 'open' | 'half_open'
+
+export interface ServiceHealth {
+  name: string
+  url: string
+  circuit: CircuitState
+  healthy: boolean
+  consec_failures: number
+  latency_ms: number
+  checked_at: string
+  healthy_since?: string
+  last_error?: string
+}
+
+export async function listHealth(): Promise<ServiceHealth[]> {
+  const res = await fetch('/v1/admin/health')
+  if (!res.ok) throw new Error('failed to fetch health')
+  return res.json()
+}
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+export async function getMergedSchema(): Promise<string> {
+  const res = await fetch('/v1/admin/schema')
+  if (!res.ok) throw new Error('failed to fetch schema')
+  const json = await res.json()
+  return json.sdl ?? ''
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+
+export async function flushCache(): Promise<{ flushed: number }> {
+  const res = await fetch('/v1/admin/cache/flush', { method: 'POST' })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json?.error ?? 'failed to flush cache')
+  return json
+}
+
 // ── Audit Log ─────────────────────────────────────────────────────────────────
 
 export interface AuditEntry {

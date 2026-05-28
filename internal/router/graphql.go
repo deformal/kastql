@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/deformal/kastql/internal/auth"
+	"github.com/deformal/kastql/internal/cache"
 	"github.com/deformal/kastql/internal/executor"
 	"github.com/deformal/kastql/internal/metrics"
 	"github.com/deformal/kastql/internal/planner"
@@ -23,6 +24,7 @@ type graphqlHandler struct {
 	log                  *zap.Logger
 	introspectionEnabled func() bool
 	secMgr               *security.Manager // nil = security disabled
+	cache                *cache.Cache      // nil = caching disabled
 }
 
 type graphqlRequest struct {
@@ -158,6 +160,19 @@ func (h *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	role := auth.GetRole(ctx)
 
+	// ── Response cache (queries only, skip mutations/introspection) ───────────
+	var cacheKey string
+	if h.cache != nil && !strings.Contains(strings.ToLower(req.Query), "mutation") {
+		cacheKey = cache.QueryKey(req.Query, req.OperationName, role, req.Variables)
+		if cached, ok := h.cache.Get(cacheKey); ok {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("X-Cache", "HIT")
+			w.WriteHeader(http.StatusOK)
+			w.Write(cached)
+			return
+		}
+	}
+
 	headers := forwardHeaders(r)
 	h.log.Debug("incoming graphql request",
 		zap.String("operation", req.OperationName),
@@ -195,8 +210,19 @@ func (h *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.recordMetric(plan, elapsed, success, errMsg)
 
 	rw.Header().Set("Content-Type", "application/json")
+	if cacheKey != "" {
+		rw.Header().Set("X-Cache", "MISS")
+	}
 	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(result)
+
+	if cacheKey != "" && success {
+		// Encode into a buffer so we can cache and write in one pass.
+		buf, _ := json.Marshal(result)
+		h.cache.Set(cacheKey, buf)
+		rw.Write(buf)
+	} else {
+		json.NewEncoder(rw).Encode(result)
+	}
 }
 
 func (h *graphqlHandler) recordMetric(plan *planner.QueryPlan, d time.Duration, success bool, errMsg string) {
