@@ -9,7 +9,7 @@ internal/playground/dist/
 
 # Frontend build output
 web/dist/
-adminpanel/dist/
+/internal/adminpanel/dist/
 web/node_modules/
 ß
 # SQLite databases (local dev)
