@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  kastql:
+    build: .
+    image: kastql:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      # Config file (read-only). Uses ${ENV_VAR} expansion inside the YAML.
+      - ./config.yaml:/etc/kastql/config.yaml:ro
+      # Persistent SQLite data directory.
+      - kastql-data:/data
+    environment:
+      # Override the JWT secret without touching config.yaml:
+      KASTQL_JWT_SECRET: "${KASTQL_JWT_SECRET:-change-me-in-production}"
+    healthcheck:
+      test: ["CMD", "/kastql", "-config", "/etc/kastql/config.yaml"]
+      # distroless has no curl/wget — use the process itself as a probe.
+      # For HTTP health checks add a sidecar or switch to alpine.
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Example upstream services (uncomment to try locally) ─────────────────
+  # users-service:
+  #   image: ghcr.io/your-org/users-service:latest
+  #   ports:
+  #     - "4001:4001"
+
+  # orders-service:
+  #   image: ghcr.io/your-org/orders-service:latest
+  #   ports:
+  #     - "4002:4002"
+
+volumes:
+  kastql-data:

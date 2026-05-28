@@ -1,0 +1,21 @@
+# Build outputs
+kastql
+kastql-linux
+kastql-linux-arm64
+coverage.out
+
+# Generated frontend embed (rebuilt by `make web`)
+internal/playground/dist/
+
+# Frontend build output
+web/dist/
+adminpanel/dist/
+web/node_modules/
+ß
+# SQLite databases (local dev)
+*.db
+*.db-shm
+*.db-wal
+.claude
+CLAUDE.md
+.env

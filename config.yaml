@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+database:
+  # Local development (relative to working directory).
+  # In Docker, mount a volume at /data and use absolute paths:
+  #   metadata_path: /data/metadata.db
+  #   metrics_path:  /data/metrics.db
+  metadata_path: metadata.db
+  metrics_path: metrics.db
+
+auth:
+  # JWT secret for HS256 validation.
+  # Use ${ENV_VAR} to inject from environment — e.g. "${KASTQL_JWT_SECRET}".
+  jwt_secret: "change-me-in-production"
+
+  # HTTP header that carries the JWT.
+  jwt_header: Authorization
+
+  # JWT claim that contains the role string.
+  role_claim: x-kastql-role
+
+  # Fallback role when no JWT or no role claim is present.
+  # Set to "" to deny all unauthenticated requests.
+  default_role: public
+
+# Bootstrap services loaded on startup.
+# Runtime changes go through POST /v1/metadata.
+services: []
+
+# ── Examples ──────────────────────────────────────────────────────────────────
+# services:
+#   - name: users
+#     url: http://users-service:4001/graphql
+#     type: federation     # delegates cross-service joins via @key / _entities
+#     enabled: true
+#     headers:
+#       x-internal-token: "${INTERNAL_TOKEN}"
+#
+#   - name: orders
+#     url: http://orders-service:4002/graphql
+#     type: stitching      # router merges schemas and joins results in memory
+#     enabled: true
