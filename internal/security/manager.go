@@ -141,7 +141,6 @@ func (m *Manager) reload() *Config {
 		m.cfg.MutationRPM != cfg.MutationRPM {
 		m.rl = newRateLimitState(cfg.GlobalRPM, cfg.PerIPRPM, cfg.MutationRPM)
 	}
-	cfg.version = m.cfg.version + 1 // always bump even on rpm-no-change path
 
 	m.cfg = cfg
 	m.loadedAt = time.Now()
